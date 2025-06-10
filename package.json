@@ -4,16 +4,23 @@
     "version": "1.0.0",
     "type": "commonjs",
     "scripts": {
-        "start": "node backend/server.js",
-        "dev": "nodemon backend/server.js",
-        "create-table": "node backend/createTable.js"
+        "start": "NODE_ENV=production node backend/server.js",
+        "dev": "NODE_ENV=development nodemon backend/server.js",
+        "create-table": "node backend/createTable.js",
+        "test": "node backend/server.js --test-mode",
+        "logs": "tail -f logs/combined.log",
+        "logs:error": "tail -f logs/error.log",
+        "logs:app": "tail -f logs/app.log",
+        "health": "curl http://localhost:3001/health",
+        "metrics": "curl http://localhost:3001/health/metrics"
     },
     "dependencies": {
         "@aws-sdk/client-dynamodb": "^3.826.0",
         "@aws-sdk/lib-dynamodb": "^3.826.0",
         "cors": "^2.8.5",
         "dotenv": "^16.5.0",
-        "express": "^4.19.2"
+        "express": "^4.19.2",
+        "winston": "^3.17.0"
     },
     "devDependencies": {
         "nodemon": "^3.0.2"
