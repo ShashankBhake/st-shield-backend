@@ -1,13 +1,21 @@
+const path = require('path');
++ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 require('dotenv').config();
 const cors = require('cors');
 const express = require('express');
 const crypto = require('crypto');
+const Razorpay = require('razorpay');
 
 const { savePolicy } = require('./models/Policy');
 const { logger, requestLogger, logError, logWarning, logInfo, logPerformance } = require('./utils/logger');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+const razorpay = new Razorpay({
+  key_id: process.env.RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 // Global error handlers for uncaught exceptions
 process.on// Global error handlers for uncaught exceptions
@@ -267,56 +275,62 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
             .update(body.toString())
             .digest('hex');
 
-        if (expectedSignature === razorpay_signature) {
-            // Payment is verified
-            logger.info('Payment signature verified successfully', {
-                orderId: razorpay_order_id,
-                paymentId: razorpay_payment_id
-            });
-
-            // Generate unique policy number
-            const policyNumber = `SSST${Date.now().toString().slice(-8)}`;
-
-            // Prepare policy item for DynamoDB
-            const policyItem = {
-                policyId: policyNumber,
-                orderId: razorpay_order_id,
-                paymentId: razorpay_payment_id,
-                userData: user_data,
-                timestamp: new Date().toISOString()
-            };
-
-            try {
-                await savePolicy(policyItem);
-
-                logger.info('Policy saved successfully', {
-                    policyNumber,
-                    orderId: razorpay_order_id,
-                    paymentId: razorpay_payment_id,
-                    userEmail: user_data?.personalInfo?.email || 'unknown'
-                });
-
-                res.json({
-                    success: true,
-                    message: 'Payment verified and policy created',
-                    policyNumber
-                });
-            } catch (err) {
-                logger.error('Error saving policy to database', {
-                    error: err.message,
-                    stack: err.stack,
-                    policyNumber,
+            if (expectedSignature === razorpay_signature) {
+                // Payment is verified
+                logger.info('Payment signature verified successfully', {
                     orderId: razorpay_order_id,
                     paymentId: razorpay_payment_id
                 });
 
-                res.status(500).json({
-                    success: false,
-                    message: 'Payment verified but failed to create policy. Please contact support.',
-                    policyNumber: null
+                // Payment capture is handled by Razorpay auto-capture, so no explicit capture needed here.
+                // Log that auto-capture is assumed
+                logger.info('Assuming auto-capture by Razorpay for payment', {
+                    orderId: razorpay_order_id,
+                    paymentId: razorpay_payment_id
                 });
-            }
-        } else {
+
+                // 2) Generate unique policy number
+                const policyNumber = `SSST${Date.now().toString().slice(-8)}`;
+            
+                // 3) Prepare policy item for DynamoDB
+                const policyItem = {
+                    policyId: policyNumber,
+                    orderId: razorpay_order_id,
+                    paymentId: razorpay_payment_id,
+                    userData: user_data,
+                    timestamp: new Date().toISOString()
+                };
+            
+                try {
+                    await savePolicy(policyItem);
+            
+                    logger.info('Policy saved successfully', {
+                        policyNumber,
+                        orderId: razorpay_order_id,
+                        paymentId: razorpay_payment_id,
+                        userEmail: user_data?.personalInfo?.email || 'unknown'
+                    });
+            
+                    return res.json({
+                        success: true,
+                        message: 'Payment captured and policy created',
+                        policyNumber
+                    });
+                } catch (err) {
+                    logger.error('Error saving policy to database', {
+                        error: err.message,
+                        stack: err.stack,
+                        policyNumber,
+                        orderId: razorpay_order_id,
+                        paymentId: razorpay_payment_id
+                    });
+                    return res.status(500).json({
+                        success: false,
+                        message: 'Payment captured but failed to create policy. Please contact support.',
+                        policyNumber: null
+                    });
+                }
+            } else {
             logger.warn('Payment verification failed: Invalid signature', {
                 orderId: razorpay_order_id,
                 paymentId: razorpay_payment_id,
@@ -344,6 +358,23 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
             message: 'Internal server error during payment verification'
         });
     }
+});
+
+// POST /api/create-order: creates Razorpay order and returns order id
+app.post('/api/create-order', async (req, res) => {
+  const { amount, currency } = req.body;
+  if (!amount || !currency) {
+    logger.error('Create order failed: Missing amount or currency', { body: req.body, ip: req.ip });
+    return res.status(400).json({ error: 'Missing amount or currency' });
+  }
+  try {
+    const order = await razorpay.orders.create({ amount, currency });
+    logger.info('Order created successfully', { orderId: order.id, amount, currency });
+    res.json({ id: order.id });
+  } catch (err) {
+    logger.error('Create order error', { error: err.message, stack: err.stack });
+    res.status(500).json({ error: 'Could not create order' });
+  }
 });
 
 app.listen(PORT, () => {
