@@ -1,10 +1,10 @@
 const path = require('path');
-+ require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
 const cors = require('cors');
 const express = require('express');
 const crypto = require('crypto');
 const Razorpay = require('razorpay');
+const fs = require('fs').promises;
 
 const { savePolicy } = require('./models/Policy');
 const { logger, requestLogger, logError, logWarning, logInfo, logPerformance } = require('./utils/logger');
@@ -26,7 +26,6 @@ if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
 }
 
 // Global error handlers for uncaught exceptions
-process.on// Global error handlers for uncaught exceptions
 process.on('uncaughtException', (error) => {
     logger.error('Uncaught Exception', {
         error: error.message,

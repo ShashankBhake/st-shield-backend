@@ -1,9 +1,36 @@
-const brevo = require('@getbrevo/brevo');
 const { logger } = require('./logger');
 
-// Initialize Brevo API client with correct configuration
-const apiInstance = new brevo.TransactionalEmailsApi();
-apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+/**
+ * Send email using Brevo API directly with HTTP requests
+ * @param {Object} emailData - Email configuration object
+ */
+async function sendBrevoEmail(emailData) {
+    try {
+        const response = await fetch('https://api.brevo.com/v3/smtp/email', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'api-key': process.env.BREVO_API_KEY
+            },
+            body: JSON.stringify(emailData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Brevo API error: ${response.status} - ${errorData}`);
+        }
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        logger.error('Brevo API request failed', {
+            error: error.message,
+            stack: error.stack
+        });
+        throw error;
+    }
+}
 
 /**
  * Send customer policy confirmation email
@@ -12,7 +39,7 @@ apiInstance.setApiKey(brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BR
  */
 async function sendCustomerConfirmationEmail(customerData, policyData) {
     try {
-        const emailContent = {
+        const emailData = {
             sender: {
                 name: "Student Shield",
                 email: process.env.SENDER_EMAIL
@@ -26,7 +53,7 @@ async function sendCustomerConfirmationEmail(customerData, policyData) {
             textContent: generateCustomerTextContent(customerData, policyData)
         };
 
-        const result = await apiInstance.sendTransacEmail(emailContent);
+        const result = await sendBrevoEmail(emailData);
         
         logger.info('Customer confirmation email sent successfully', {
             customerEmail: customerData.email,
@@ -52,7 +79,7 @@ async function sendCustomerConfirmationEmail(customerData, policyData) {
  */
 async function sendCompanyAcknowledgmentEmail(customerData, policyData) {
     try {
-        const emailContent = {
+        const emailData = {
             sender: {
                 name: "Student Shield System",
                 email: process.env.SENDER_EMAIL
@@ -66,7 +93,7 @@ async function sendCompanyAcknowledgmentEmail(customerData, policyData) {
             textContent: generateCompanyTextContent(customerData, policyData)
         };
 
-        const result = await apiInstance.sendTransacEmail(emailContent);
+        const result = await sendBrevoEmail(emailData);
         
         logger.info('Company acknowledgment email sent successfully', {
             policyNumber: policyData.policyNumber,
@@ -80,6 +107,38 @@ async function sendCompanyAcknowledgmentEmail(customerData, policyData) {
             error: error.message,
             policyNumber: policyData.policyNumber,
             customerEmail: customerData.email
+        });
+        throw error;
+    }
+}
+
+/**
+ * Send email campaign using Brevo API directly (similar to your curl example)
+ * @param {Object} campaignData - Campaign configuration object
+ */
+async function sendEmailCampaign(campaignData) {
+    try {
+        const response = await fetch('https://api.brevo.com/v3/emailCampaigns', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'Content-Type': 'application/json',
+                'api-key': process.env.BREVO_API_KEY
+            },
+            body: JSON.stringify(campaignData)
+        });
+
+        if (!response.ok) {
+            const errorData = await response.text();
+            throw new Error(`Brevo Campaign API error: ${response.status} - ${errorData}`);
+        }
+
+        const result = await response.json();
+        return result;
+    } catch (error) {
+        logger.error('Brevo Campaign API request failed', {
+            error: error.message,
+            stack: error.stack
         });
         throw error;
     }
@@ -284,5 +343,6 @@ Nominee: ${customerData.nomineeFullName} (${customerData.nomineeRelationship})
 
 module.exports = {
     sendCustomerConfirmationEmail,
-    sendCompanyAcknowledgmentEmail
+    sendCompanyAcknowledgmentEmail,
+    sendEmailCampaign
 };
