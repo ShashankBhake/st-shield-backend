@@ -8,6 +8,7 @@ const Razorpay = require('razorpay');
 
 const { savePolicy } = require('./models/Policy');
 const { logger, requestLogger, logError, logWarning, logInfo, logPerformance } = require('./utils/logger');
+const { sendCustomerConfirmationEmail, sendCompanyAcknowledgmentEmail } = require('./utils/emailService');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -308,8 +309,54 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
                         policyNumber,
                         orderId: razorpay_order_id,
                         paymentId: razorpay_payment_id,
-                        userEmail: user_data?.personalInfo?.email || 'unknown'
+                        userEmail: user_data?.email || 'unknown'
                     });
+
+                    // Send email notifications after successful policy creation
+                    try {
+                        // Prepare customer data for emails
+                        const customerData = {
+                            name: user_data.name,
+                            email: user_data.email,
+                            phone: user_data.phone,
+                            dateOfBirth: user_data.dateOfBirth,
+                            aadharNumber: user_data.aadharNumber,
+                            address: user_data.address,
+                            city: user_data.city,
+                            pincode: user_data.pincode,
+                            nomineeFullName: user_data.nomineeFullName,
+                            nomineeRelationship: user_data.nomineeRelationship
+                        };
+
+                        // Prepare policy data for emails - get amount from user_data
+                        const policyData = {
+                            policyNumber,
+                            planName: user_data.planType,
+                            amount: user_data.amount || 'N/A', // Get amount from user_data
+                            paymentId: razorpay_payment_id,
+                            timestamp: new Date().toLocaleString()
+                        };
+
+                        // Send customer confirmation email
+                        await sendCustomerConfirmationEmail(customerData, policyData);
+
+                        // Send company acknowledgment email
+                        await sendCompanyAcknowledgmentEmail(customerData, policyData);
+
+                        logger.info('Email notifications sent successfully', {
+                            policyNumber,
+                            customerEmail: customerData.email
+                        });
+
+                    } catch (emailError) {
+                        // Log email error but don't fail the entire request
+                        logger.error('Failed to send email notifications', {
+                            error: emailError.message,
+                            policyNumber,
+                            customerEmail: user_data?.email
+                        });
+                        // Continue execution - emails are not critical for policy creation
+                    }
             
                     return res.json({
                         success: true,
