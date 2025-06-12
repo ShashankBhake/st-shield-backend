@@ -4,20 +4,15 @@ FROM node:18-alpine AS base
 # Set working directory
 WORKDIR /app
 
-# Copy package files
+# Copy package files and lockfile
 COPY package*.json ./
 COPY pnpm-lock.yaml ./
 
-# Install latest pnpm globally to handle lockfile compatibility
+# Install latest pnpm globally
 RUN npm install -g pnpm@latest
 
-# Production dependencies stage
-FROM base AS deps
-RUN pnpm install --prod 
-
-# Development dependencies stage (for building if needed)
-FROM base AS deps-dev
-RUN pnpm install 
+# Install all dependencies
+RUN pnpm install
 
 # Production stage
 FROM node:18-alpine AS production
@@ -25,19 +20,18 @@ FROM node:18-alpine AS production
 # Install dumb-init for proper signal handling
 RUN apk add --no-cache dumb-init
 
-# Create app user for security
-RUN addgroup -g 1001 -S nodejs
-RUN adduser -S nodejs -u 1001
+# Create a non-root user
+RUN addgroup -g 1001 -S nodejs && adduser -S -u 1001 nodejs
 
 # Set working directory
 WORKDIR /app
 
-# Copy production dependencies
-COPY --from=deps --chown=nodejs:nodejs /app/node_modules ./node_modules
+# Copy dependencies from base stage
+COPY --from=base /app/node_modules ./node_modules
 
-# Copy application code
-COPY --chown=nodejs:nodejs backend/ ./backend/
-COPY --chown=nodejs:nodejs package*.json ./
+# Copy application code and package.json
+COPY --from=base /app/package*.json ./
+COPY --from=base /app/backend ./backend
 
 # Create logs directory
 RUN mkdir -p logs && chown nodejs:nodejs logs
@@ -45,7 +39,7 @@ RUN mkdir -p logs && chown nodejs:nodejs logs
 # Switch to non-root user
 USER nodejs
 
-# Expose port 3001 (the actual port the app uses)
+# Expose application port
 EXPOSE 3001
 
 # Health check
@@ -56,4 +50,4 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 ENTRYPOINT ["dumb-init", "--"]
 
 # Start the application
-CMD ["npm", "start"]
+CMD ["node", "backend/server.js"]
