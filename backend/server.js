@@ -13,10 +13,17 @@ const { sendCustomerConfirmationEmail, sendCompanyAcknowledgmentEmail } = requir
 const app = express();
 const PORT = process.env.PORT || 3001;
 
-const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID,
-  key_secret: process.env.RAZORPAY_KEY_SECRET
-});
+// Initialize Razorpay only if credentials are available
+let razorpay = null;
+if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
+  razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+  });
+  console.log('✅ Razorpay initialized successfully');
+} else {
+  console.warn('⚠️  Razorpay credentials not found - payment features will be disabled');
+}
 
 // Global error handlers for uncaught exceptions
 process.on// Global error handlers for uncaught exceptions
@@ -262,6 +269,18 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
         user_data
     } = req.body;
 
+    // Check if Razorpay is configured
+    if (!process.env.RAZORPAY_KEY_SECRET) {
+        logger.error('Payment verification failed: Razorpay not configured', {
+            orderId: razorpay_order_id,
+            ip: req.ip
+        });
+        return res.status(503).json({
+            success: false,
+            message: 'Payment service not available - Razorpay not configured'
+        });
+    }
+
     logger.info('Payment verification started', {
         orderId: razorpay_order_id,
         paymentId: razorpay_payment_id,
@@ -410,6 +429,18 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
 // POST /api/create-order: creates Razorpay order and returns order id
 app.post('/api/create-order', async (req, res) => {
   const { amount, currency } = req.body;
+  
+  // Check if Razorpay is initialized
+  if (!razorpay) {
+    logger.error('Create order failed: Razorpay not configured', { 
+      body: req.body, 
+      ip: req.ip 
+    });
+    return res.status(503).json({ 
+      error: 'Payment service not available - Razorpay not configured' 
+    });
+  }
+  
   if (!amount || !currency) {
     logger.error('Create order failed: Missing amount or currency', { body: req.body, ip: req.ip });
     return res.status(400).json({ error: 'Missing amount or currency' });
