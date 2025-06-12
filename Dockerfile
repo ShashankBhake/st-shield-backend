@@ -13,11 +13,11 @@ RUN npm install -g pnpm@latest
 
 # Production dependencies stage
 FROM base AS deps
-RUN pnpm install --prod --force
+RUN pnpm install --prod 
 
 # Development dependencies stage (for building if needed)
 FROM base AS deps-dev
-RUN pnpm install --force
+RUN pnpm install 
 
 # Production stage
 FROM node:18-alpine AS production
