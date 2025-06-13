@@ -14,6 +14,9 @@ RUN npm install -g pnpm@latest
 # Install all dependencies
 RUN pnpm install
 
+# Copy application code
+COPY ./backend ./backend
+
 # Production stage
 FROM node:18-alpine AS production
 
