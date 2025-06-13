@@ -26,11 +26,15 @@ RUN addgroup -g 1001 -S nodejs && adduser -S -u 1001 nodejs
 # Set working directory
 WORKDIR /app
 
-# Copy dependencies from base stage
-COPY --from=base /app/node_modules ./node_modules
-
-# Copy application code and package.json
+# Copy package files and lockfile
 COPY --from=base /app/package*.json ./
+COPY --from=base /app/pnpm-lock.yaml ./
+
+# Install pnpm and production dependencies
+RUN npm install -g pnpm@latest
+RUN pnpm install --prod --shamefully-hoist
+
+# Copy application code
 COPY --from=base /app/backend ./backend
 
 # Create logs directory
@@ -49,5 +53,5 @@ HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
 # Use dumb-init to handle signals properly
 ENTRYPOINT ["dumb-init", "--"]
 
-# Start the application
-CMD ["node", "backend/server.js"]
+# Start the application using npm start
+CMD ["npm", "start"]
