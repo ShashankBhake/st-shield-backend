@@ -37,9 +37,6 @@ RUN pnpm install --prod --shamefully-hoist
 # Copy application code
 COPY --from=base /app/backend ./backend
 
-# Create logs directory
-RUN mkdir -p logs && chown nodejs:nodejs logs
-
 # Switch to non-root user
 USER nodejs
 

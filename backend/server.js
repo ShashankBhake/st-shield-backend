@@ -7,8 +7,12 @@ const Razorpay = require('razorpay');
 const fs = require('fs').promises;
 
 const { savePolicy } = require('./models/Policy');
-const { logger, requestLogger, logError, logWarning, logInfo, logPerformance } = require('./utils/logger');
-const { sendCustomerConfirmationEmail, sendCompanyAcknowledgmentEmail } = require('./utils/emailService');
+const logger = console;
+const requestLogger = (req, res, next) => next();
+const logError = console.error.bind(console);
+const logWarning = console.warn.bind(console);
+const logInfo = console.info.bind(console);
+const logPerformance = (name, duration) => console.log(`${name}: ${duration}`);
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -65,7 +69,7 @@ app.use(cors({
     origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
     credentials: true
 }));
-app.use(requestLogger);
+// requestLogger disabled
 
 // Request validation middleware
 const validatePaymentRequest = (req, res, next) => {

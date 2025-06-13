@@ -1,7 +1,6 @@
 // Initialize DynamoDB Document Client
 const { DynamoDBClient } = require('@aws-sdk/client-dynamodb');
 const { DynamoDBDocumentClient, PutCommand, ScanCommand } = require('@aws-sdk/lib-dynamodb');
-const { logger } = require('../utils/logger');
 require('dotenv').config();
 
 const client = new DynamoDBClient({ region: process.env.AWS_REGION });

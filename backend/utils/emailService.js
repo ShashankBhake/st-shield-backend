@@ -1,5 +1,3 @@
-const { logger } = require('./logger');
-
 /**
  * Send email using Brevo API directly with HTTP requests
  * @param {Object} emailData - Email configuration object
@@ -24,10 +22,7 @@ async function sendBrevoEmail(emailData) {
         const result = await response.json();
         return result;
     } catch (error) {
-        logger.error('Brevo API request failed', {
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('Brevo API request failed', error);
         throw error;
     }
 }
@@ -55,19 +50,11 @@ async function sendCustomerConfirmationEmail(customerData, policyData) {
 
         const result = await sendBrevoEmail(emailData);
         
-        logger.info('Customer confirmation email sent successfully', {
-            customerEmail: customerData.email,
-            policyNumber: policyData.policyNumber,
-            messageId: result.messageId
-        });
+        console.info('Customer confirmation email sent successfully', result);
 
         return { success: true, messageId: result.messageId };
     } catch (error) {
-        logger.error('Failed to send customer confirmation email', {
-            error: error.message,
-            customerEmail: customerData.email,
-            policyNumber: policyData.policyNumber
-        });
+        console.error('Failed to send customer confirmation email', error);
         throw error;
     }
 }
@@ -95,19 +82,11 @@ async function sendCompanyAcknowledgmentEmail(customerData, policyData) {
 
         const result = await sendBrevoEmail(emailData);
         
-        logger.info('Company acknowledgment email sent successfully', {
-            policyNumber: policyData.policyNumber,
-            customerEmail: customerData.email,
-            messageId: result.messageId
-        });
+        console.info('Company acknowledgment email sent successfully', result);
 
         return { success: true, messageId: result.messageId };
     } catch (error) {
-        logger.error('Failed to send company acknowledgment email', {
-            error: error.message,
-            policyNumber: policyData.policyNumber,
-            customerEmail: customerData.email
-        });
+        console.error('Failed to send company acknowledgment email', error);
         throw error;
     }
 }
@@ -136,10 +115,7 @@ async function sendEmailCampaign(campaignData) {
         const result = await response.json();
         return result;
     } catch (error) {
-        logger.error('Brevo Campaign API request failed', {
-            error: error.message,
-            stack: error.stack
-        });
+        console.error('Brevo Campaign API request failed', error);
         throw error;
     }
 }
