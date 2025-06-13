@@ -7,6 +7,7 @@ const Razorpay = require('razorpay');
 const fs = require('fs').promises;
 
 const { savePolicy } = require('./models/Policy');
+const { sendCustomerConfirmationEmail, sendCompanyAcknowledgmentEmail } = require('./utils/emailService');
 const logger = console;
 const requestLogger = (req, res, next) => next();
 const logError = console.error.bind(console);
