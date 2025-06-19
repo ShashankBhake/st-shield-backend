@@ -18,6 +18,13 @@ const logPerformance = (name, duration) => console.log(`${name}: ${duration}`);
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+// In-memory store for order amounts to prevent price tampering
+const orderStore = new Map();
+const planPrices = {
+  'student-shield': 99900,        // ₹999 * 100 paise
+  'student-shield-plus': 150000,   // ₹1500 * 100 paise
+};
+
 // Initialize Razorpay only if credentials are available
 let razorpay = null;
 if (process.env.RAZORPAY_KEY_ID && process.env.RAZORPAY_KEY_SECRET) {
@@ -67,7 +74,7 @@ process.on('SIGINT', () => {
 // Middleware
 app.use(express.json({ limit: '10mb' }));
 app.use(cors({
-    origin: process.env.ALLOWED_ORIGINS?.split(',') || '*',
+    origin: process.env.ALLOWED_ORIGINS?.split(','),
     credentials: true
 }));
 // requestLogger disabled
@@ -265,6 +272,7 @@ app.use((error, req, res, next) => {
     });
 });
 
+// POST /api/verify-payment: verify payment signature and amount
 app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
     const {
         razorpay_order_id,
@@ -272,6 +280,50 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
         razorpay_signature,
         user_data
     } = req.body;
+
+    // Verify order exists and expected amount
+    const expectedAmount = orderStore.get(razorpay_order_id);
+    if (!expectedAmount) {
+        return res.status(400).json({ success: false, message: 'Invalid order ID' });
+    }
+    try {
+        // Fetch actual payment details
+        const paymentDetails = await razorpay.payments.fetch(razorpay_payment_id);
+        if (paymentDetails.amount !== expectedAmount) {
+            logger.error('Payment verification failed: Amount mismatch', { orderId: razorpay_order_id, expectedAmount, actualAmount: paymentDetails.amount });
+            // Notify company about tampering attempt
+            const customerData = {
+                name: user_data.name,
+                email: user_data.email,
+                phone: user_data.phone,
+                dateOfBirth: user_data.dateOfBirth,
+                aadharNumber: user_data.aadharNumber,
+                address: user_data.address,
+                city: user_data.city,
+                pincode: user_data.pincode,
+                nomineeFullName: user_data.nomineeFullName,
+                nomineeRelationship: user_data.nomineeRelationship
+            };
+            const policyAlertData = {
+                policyNumber: 'N/A',
+                planName: user_data.planType,
+                amount: `Expected: ${expectedAmount}, Received: ${paymentDetails.amount}`,
+                paymentId: razorpay_payment_id
+            };
+            try {
+                await sendCompanyAcknowledgmentEmail(customerData, policyAlertData);
+            } catch (emailErr) {
+                logger.error('Failed to send tamper notification email', { error: emailErr.message });
+            }
+            return res.status(400).json({
+                success: false,
+                message: 'Policy creation failed: Trusted payment not received. Please contact support.'
+            });
+        }
+    } catch (err) {
+        logger.error('Failed to fetch payment details', { error: err.message, orderId: razorpay_order_id, paymentId: razorpay_payment_id });
+        return res.status(500).json({ success: false, message: 'Could not verify payment amount' });
+    }
 
     // Check if Razorpay is configured
     if (!process.env.RAZORPAY_KEY_SECRET) {
@@ -430,33 +482,39 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
     }
 });
 
-// POST /api/create-order: creates Razorpay order and returns order id
+// POST /api/create-order: create Razorpay order and store amount
 app.post('/api/create-order', async (req, res) => {
-  const { amount, currency } = req.body;
-  
-  // Check if Razorpay is initialized
-  if (!razorpay) {
-    logger.error('Create order failed: Razorpay not configured', { 
-      body: req.body, 
-      ip: req.ip 
-    });
-    return res.status(503).json({ 
-      error: 'Payment service not available - Razorpay not configured' 
-    });
-  }
-  
-  if (!amount || !currency) {
-    logger.error('Create order failed: Missing amount or currency', { body: req.body, ip: req.ip });
-    return res.status(400).json({ error: 'Missing amount or currency' });
-  }
-  try {
-    const order = await razorpay.orders.create({ amount, currency });
-    logger.info('Order created successfully', { orderId: order.id, amount, currency });
-    res.json({ id: order.id });
-  } catch (err) {
-    logger.error('Create order error', { error: err.message, stack: err.stack });
-    res.status(500).json({ error: 'Could not create order' });
-  }
+    const { planType } = req.body;
+    // Determine amount from trusted server-side mapping
+    const amount = planPrices[planType];
+    const currency = 'INR';
+    if (!amount) {
+        logger.error('Create order failed: Invalid plan type', { planType, ip: req.ip });
+        return res.status(400).json({ error: 'Invalid plan type' });
+    }
+    
+    // Create order with trusted amount
+    if (!razorpay) {
+        logger.error('Create order failed: Razorpay not configured', { 
+          body: req.body, 
+          ip: req.ip 
+        });
+        return res.status(503).json({ 
+          error: 'Payment service not available - Razorpay not configured' 
+        });
+    }
+    
+    try {
+        const order = await razorpay.orders.create({ amount, currency });
+        // Store the amount for later verification
+        orderStore.set(order.id, amount);
+
+        logger.info('Order created successfully', { orderId: order.id, amount, currency });
+        res.json({ id: order.id });
+    } catch (err) {
+        logger.error('Create order error', { error: err.message, stack: err.stack });
+        res.status(500).json({ error: 'Could not create order' });
+    }
 });
 
 app.listen(PORT, () => {
