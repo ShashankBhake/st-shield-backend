@@ -158,10 +158,14 @@ function generateCustomerEmailTemplate(customerData, policyData) {
                 <p><strong>Policy Holder:</strong> ${customerData.name}</p>
                 <p><strong>Email:</strong> ${customerData.email}</p>
                 <p><strong>Phone:</strong> ${customerData.phone}</p>
-                <p><strong>Policy Date:</strong> ${policyData.timestamp.split(',')[0]}</p>
-                <p><strong>Payment ID:</strong> ${policyData.paymentId}</p>
+                <p><strong>Gender:</strong> ${customerData.gender}</p>
+                <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth}</p>
+                <p><strong>Aadhar:</strong> ${customerData.aadharNumber}</p>
+                <p><strong>Address:</strong> ${customerData.address}, ${customerData.city}, ${customerData.state} - ${customerData.pincode}</p>
                 <p><strong>Nominee Name:</strong> ${customerData.nomineeFullName}</p>
                 <p><strong>Nominee Relationship:</strong> ${customerData.nomineeRelationship}</p>
+                <p><strong>Nominee Gender:</strong> ${customerData.nomineeGender}</p>
+                <p><strong>Nominee DOB:</strong> ${customerData.nomineeDateOfBirth}</p>
             </div>
             <div class="help">
                 <h3>📞 Need Help?</h3>
@@ -207,10 +211,14 @@ Premium Paid: ₹${policyData.amount}
 Policy Holder: ${customerData.name}
 Email: ${customerData.email}
 Phone: ${customerData.phone}
-Policy Date: ${policyData.timestamp.split(',')[0]}
-Payment ID: ${policyData.paymentId}
+Gender: ${customerData.gender}
+Date of Birth: ${customerData.dateOfBirth}
+Aadhar: ${customerData.aadharNumber}
+Address: ${customerData.address}, ${customerData.city}, ${customerData.state} - ${customerData.pincode}
 Nominee Name: ${customerData.nomineeFullName}
 Nominee Relationship: ${customerData.nomineeRelationship}
+Nominee Gender: ${customerData.nomineeGender}
+Nominee DOB: ${customerData.nomineeDateOfBirth}
 
 📞 Need Help?
 Email: support@studentshield.in
@@ -271,18 +279,21 @@ function generateCompanyEmailTemplate(customerData, policyData) {
                 <p><strong>Phone:</strong> ${customerData.phone}</p>
                 <p><strong>Date of Birth:</strong> ${customerData.dateOfBirth}</p>
                 <p><strong>Aadhar:</strong> ${customerData.aadharNumber}</p>
+                <p><strong>Gender:</strong> ${customerData.gender}</p>
             </div>
             
             <div class="details">
                 <h3>Address</h3>
                 <p>${customerData.address}</p>
-                <p>${customerData.city}, ${customerData.pincode}</p>
+                <p>${customerData.city}, ${customerData.state} - ${customerData.pincode}</p>
             </div>
             
             <div class="details">
                 <h3>Nominee Information</h3>
                 <p><strong>Name:</strong> ${customerData.nomineeFullName}</p>
                 <p><strong>Relationship:</strong> ${customerData.nomineeRelationship}</p>
+                <p><strong>Nominee Gender:</strong> ${customerData.nomineeGender}</p>
+                <p><strong>Nominee DOB:</strong> ${customerData.nomineeDateOfBirth}</p>
             </div>
         </div>
     </div>
@@ -310,10 +321,13 @@ Customer Information:
 - Phone: ${customerData.phone}
 - Date of Birth: ${customerData.dateOfBirth}
 - Aadhar: ${customerData.aadharNumber}
+- Gender: ${customerData.gender}
 
-Address: ${customerData.address}, ${customerData.city}, ${customerData.pincode}
+Address: ${customerData.address}, ${customerData.city}, ${customerData.state} - ${customerData.pincode}
 
 Nominee: ${customerData.nomineeFullName} (${customerData.nomineeRelationship})
+Nominee Gender: ${customerData.nomineeGender}
+Nominee DOB: ${customerData.nomineeDateOfBirth}
 `;
 }
 

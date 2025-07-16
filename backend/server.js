@@ -296,13 +296,17 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
                 name: user_data.name,
                 email: user_data.email,
                 phone: user_data.phone,
+                gender: user_data.gender,
                 dateOfBirth: user_data.dateOfBirth,
                 aadharNumber: user_data.aadharNumber,
                 address: user_data.address,
                 city: user_data.city,
+                state: user_data.state,
                 pincode: user_data.pincode,
                 nomineeFullName: user_data.nomineeFullName,
-                nomineeRelationship: user_data.nomineeRelationship
+                nomineeRelationship: user_data.nomineeRelationship,
+                nomineeGender: user_data.nomineeGender,
+                nomineeDateOfBirth: user_data.nomineeDateOfBirth
             };
             const policyAlertData = {
                 policyNumber: 'N/A',
@@ -398,9 +402,13 @@ app.post('/api/verify-payment', validatePaymentRequest, async (req, res) => {
                             aadharNumber: user_data.aadharNumber,
                             address: user_data.address,
                             city: user_data.city,
+                            state: user_data.state,
                             pincode: user_data.pincode,
+                            gender: user_data.gender,
                             nomineeFullName: user_data.nomineeFullName,
-                            nomineeRelationship: user_data.nomineeRelationship
+                            nomineeRelationship: user_data.nomineeRelationship,
+                            nomineeGender: user_data.nomineeGender,
+                            nomineeDateOfBirth: user_data.nomineeDateOfBirth
                         };
 
                         // Prepare policy data for emails - get amount from user_data
