@@ -22,7 +22,7 @@ const PORT = process.env.PORT || 3001;
 const orderStore = new Map();
 const planPrices = {
   'student-shield': 99900,        // ₹999 * 100 paise
-  'student-shield-plus': 150000,   // ₹1500 * 100 paise
+  'student-shield-plus': 199900,   // ₹1999 * 100 paise
 };
 
 // Initialize Razorpay only if credentials are available
